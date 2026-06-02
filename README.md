@@ -138,7 +138,7 @@ Arkadiusz Oczkowski
 Licensed Securities Broker
 
 - LinkedIn: www.linkedin.com/in/arkadiusz-o-12275639a
-- GitHub: [github.com/your-username](https://github.com/Skibro277
+- GitHub:(https://github.com/Skibro277
 )
 
 ---
