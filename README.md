@@ -136,8 +136,6 @@ Financial data is fetched from **Yahoo Finance** via the [`yfinance`](https://gi
 
 Arkadiusz Oczkowski
 Licensed Securities Broker
-
-- LinkedIn: www.linkedin.com/in/arkadiusz-o-12275639a
 - GitHub:https://github.com/Skibro277
 
 
