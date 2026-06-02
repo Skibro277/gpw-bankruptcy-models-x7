@@ -143,4 +143,5 @@ Licensed Securities Broker
 
 ## Disclaimer
 
+Due to Yahoo Finance rate limiting on shared cloud IPs, full functionality (live data fetching) requires local installation. The Streamlit Cloud demo showcases UI and manual data entry mode.
 This application is for **educational and research purposes only**. Results should not be interpreted as investment advice or recommendations. The author is not liable for any decisions made on the basis of the outputs of this tool. See the in-app disclaimer for full MAR / Regulation (EU) 2017/565 notice.
