@@ -19,23 +19,26 @@ from reportlab.platypus import (
 )
 
 # --- Rejestracja czcionki z polskimi znakami ---
-_FONT_PATHS = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-]
+from pathlib import Path
+# --- Rejestracja czcionki z polskimi znakami ---
+# Ścieżki relatywne do tego pliku — działają lokalnie, na Replicie
+# i na Streamlit Cloud (pliki .ttf są commitowane do repozytorium).
+_FONTS_DIR = Path(__file__).parent / "fonts"
+_FONT_PATHS = {
+    "DejaVu":      _FONTS_DIR / "DejaVuSans.ttf",
+    "DejaVu-Bold": _FONTS_DIR / "DejaVuSans-Bold.ttf",
+}
 _FONTS_REGISTERED = False
-
-
 def _zarejestruj_czcionki():
     global _FONTS_REGISTERED
     if _FONTS_REGISTERED:
         return
     try:
-        pdfmetrics.registerFont(TTFont("DejaVu", _FONT_PATHS[0]))
-        pdfmetrics.registerFont(TTFont("DejaVu-Bold", _FONT_PATHS[1]))
+        for name, path in _FONT_PATHS.items():
+            pdfmetrics.registerFont(TTFont(name, str(path)))
         _FONTS_REGISTERED = True
     except Exception:
-        # Fallback do Helvetica jeśli DejaVu niedostępne
+        # Fallback do Helvetica jeśli pliki .ttf niedostępne
         _FONTS_REGISTERED = False
 
 
