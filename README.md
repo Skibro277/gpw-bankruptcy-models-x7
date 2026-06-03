@@ -10,17 +10,17 @@ A Streamlit application implementing seven Polish and international discriminant
 
 ## Features
 
-- **Live data from Yahoo Finance** — automatic fetching of financial statements for 116 companies from WIG20, mWIG40, and sWIG80 indices
-- **Audit trail** — every fetched value shows its exact source row from Yahoo Finance (balance sheet, income statement, or cash flow)
-- **Balance sheet validation** — automatic consistency checks with warnings for data quality issues
-- **Manual entry & editing** — all financial fields are editable in the UI; changes immediately recalculate all models
-- **Multi-year trend analysis** — up to 4 years of historical data with trend charts
-- **Mass screening** — one-click scoring of up to 116 companies, ranked by risk consensus
-- **Model validation** — empirical accuracy assessment (confusion matrix, ROC curves, AUC) on a sample of 31 observations (15 bankruptcies + 16 healthy)
-- **Bankruptcy backtests** — historical case studies: PBG, GetBack, Petrolinvest, Hawe, ZM Henryk Kania — Z-scores 3 years before bankruptcy
-- **Sensitivity analysis** — interactive sliders ±X%, tornado chart showing impact of individual balance sheet items on Altman Z'
-- **PDF reports** — downloadable A4 reports with full methodology, source audit, and MAR/Regulation 2017/565 disclaimer
-- **Session snapshots** — reproducible JSON exports with SHA-256 data hash for audit/due diligence purposes
+- **Live data from Yahoo Finance** - automatic fetching of financial statements for 116 companies from WIG20, mWIG40, and sWIG80 indices
+- **Audit trail** - every fetched value shows its exact source row from Yahoo Finance (balance sheet, income statement, or cash flow)
+- **Balance sheet validation** - automatic consistency checks with warnings for data quality issues
+- **Manual entry & editing** - all financial fields are editable in the UI; changes immediately recalculate all models
+- **Multi-year trend analysis** - up to 4 years of historical data with trend charts
+- **Mass screening** - one-click scoring of up to 116 companies, ranked by risk consensus
+- **Model validation** - empirical accuracy assessment (confusion matrix, ROC curves, AUC) on a sample of 31 observations (15 bankruptcies + 16 healthy)
+- **Bankruptcy backtests** - historical case studies: PBG, GetBack, Petrolinvest, Hawe, ZM Henryk Kania — Z-scores 3 years before bankruptcy
+- **Sensitivity analysis** - interactive sliders ±X%, tornado chart showing impact of individual balance sheet items on Altman Z'
+- **PDF reports** - downloadable A4 reports with full methodology, source audit, and MAR/Regulation 2017/565 disclaimer
+- **Session snapshots** - reproducible JSON exports with SHA-256 data hash for audit/due diligence purposes
 
 ---
 
@@ -38,13 +38,13 @@ A Streamlit application implementing seven Polish and international discriminant
 
 ### Model Notes
 
-- **Altman (1968)** — original Z-score for publicly traded manufacturing firms; X4 uses market capitalisation.
-- **Altman Z' (1983)** — revised version for private firms; X4 uses book value of equity.
-- **Mączyńska INE PAN (1994)** — estimated on Polish firms by the Institute of Economics, Polish Academy of Sciences; 6-variable model.
-- **Mączyńska Model E (2004)** — second-generation Polish model, 5 variables, improved for Polish accounting standards.
-- **Hołda (2001)** — estimated on Polish firms by Artur Hołda; X4 uses operating cost turnover ratio.
-- **Gajdka-Stos (1996)** — Polish model using pretax income in X4; requires operating expenses for X2.
-- **Poznański / Hamrol-Czajka-Piechocki (2004)** — 4-variable Polish model; X2 is the quick ratio (current assets minus inventory).
+- **Altman (1968)** - original Z-score for publicly traded manufacturing firms; X4 uses market capitalisation.
+- **Altman Z' (1983)** - revised version for private firms; X4 uses book value of equity.
+- **Mączyńska INE PAN (1994)** - estimated on Polish firms by the Institute of Economics, Polish Academy of Sciences; 6-variable model.
+- **Mączyńska Model E (2004)** - second-generation Polish model, 5 variables, improved for Polish accounting standards.
+- **Hołda (2001)** - estimated on Polish firms by Artur Hołda; X4 uses operating cost turnover ratio.
+- **Gajdka-Stos (1996)** - Polish model using pretax income in X4; requires operating expenses for X2.
+- **Poznański / Hamrol-Czajka-Piechocki (2004)** - 4-variable Polish model; X2 is the quick ratio (current assets minus inventory).
 
 ---
 
@@ -52,14 +52,14 @@ A Streamlit application implementing seven Polish and international discriminant
 
 The application offers 8 independent analysis modes accessible from the sidebar:
 
-1. **Single period** — manual data entry for one fiscal year + PDF report + JSON snapshot
-2. **Multi-year trend** — analysis across multiple years with trend charts
-3. **GPW listed company (online)** — automatic data fetching for WIG20/mWIG40/sWIG80 companies
-4. **WIG20/mWIG40/sWIG80 screening** — mass scanner with risk ranking and CSV export
-5. **Model validation** — empirical accuracy assessment with ROC curves and AUC
-6. **Bankruptcy backtest** — historical Polish bankruptcy case studies
-7. **Sensitivity analysis** — interactive tornado chart for Altman Z'
-8. **Methodology** — mathematical documentation (LaTeX), bibliography, and model limitations
+1. **Single period** - manual data entry for one fiscal year + PDF report + JSON snapshot
+2. **Multi-year trend** - analysis across multiple years with trend charts
+3. **GPW listed company (online)** - automatic data fetching for WIG20/mWIG40/sWIG80 companies
+4. **WIG20/mWIG40/sWIG80 screening** - mass scanner with risk ranking and CSV export
+5. **Model validation** - empirical accuracy assessment with ROC curves and AUC
+6. **Bankruptcy backtest** - historical Polish bankruptcy case studies
+7. **Sensitivity analysis** - interactive tornado chart for Altman Z'
+8. **Methodology** - mathematical documentation (LaTeX), bibliography, and model limitations
 
 ---
 
@@ -82,7 +82,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The application will open at `http://localhost:8501`.
+The application will open at `http://localhost:5000`.
 
 No API keys or additional configuration are required.
 
@@ -95,7 +95,7 @@ Financial data is fetched from **Yahoo Finance** via the [`yfinance`](https://gi
 **Important limitations:**
 
 - Data quality for Polish companies may differ from official ESPI/ESEF filings. Always cross-check critical figures with the original annual reports.
-- Banks, insurance companies, and other financial institutions are automatically flagged and excluded from the analysis — discriminant models were estimated on manufacturing and trading companies.
+- Banks, insurance companies, and other financial institutions are automatically flagged and excluded from the analysis - discriminant models were estimated on manufacturing and trading companies.
 - Yahoo Finance occasionally returns missing or inconsistent rows (especially for smaller sWIG80 companies). The audit trail panel shows exactly which source row each value was taken from, or whether a fallback calculation was used.
 - All monetary values are denominated in thousands (PLN or the company's reporting currency).
 
