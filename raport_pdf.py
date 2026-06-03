@@ -1,8 +1,7 @@
 """
-Generator raportu PDF z analizy ryzyka upadłości.
-
-Wykorzystuje reportlab + DejaVu Sans (obsługa polskich znaków diakrytycznych).
-Zwraca bajty PDF gotowe do przekazania do st.download_button.
+Generator raportu PDF z analizy ryzyka upadlosci.
+Uzywa wylacznie standardowych fontow Helvetica (bez zewnetrznych .ttf)
+dla pelnej kompatybilnosci ze Streamlit Cloud i kazdym lokalnym systemem.
 """
 from io import BytesIO
 from datetime import datetime
@@ -13,34 +12,12 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
 )
 
-# --- Rejestracja czcionki z polskimi znakami ---
-from pathlib import Path
-# --- Rejestracja czcionki z polskimi znakami ---
-# Ścieżki relatywne do tego pliku — działają lokalnie, na Replicie
-# i na Streamlit Cloud (pliki .ttf są commitowane do repozytorium).
-_FONTS_DIR = Path(__file__).parent / "fonts"
-_FONT_PATHS = {
-    "DejaVu":      _FONTS_DIR / "DejaVuSans.ttf",
-    "DejaVu-Bold": _FONTS_DIR / "DejaVuSans-Bold.ttf",
-}
-_FONTS_REGISTERED = False
-def _zarejestruj_czcionki():
-    global _FONTS_REGISTERED
-    if _FONTS_REGISTERED:
-        return
-    try:
-        for name, path in _FONT_PATHS.items():
-            pdfmetrics.registerFont(TTFont(name, str(path)))
-        _FONTS_REGISTERED = True
-    except Exception:
-        # Fallback do Helvetica jeśli pliki .ttf niedostępne
-        _FONTS_REGISTERED = False
-
+FONT = "Helvetica"
+FONT_B = "Helvetica-Bold"
 
 # Kolory korporacyjne (zgodne z app.py)
 GRANATOWY = colors.HexColor("#0F2A47")
@@ -53,71 +30,73 @@ SZARA_STREFA = colors.HexColor("#f59e0b")
 BEZPIECZNY = colors.HexColor("#16a34a")
 
 
-def _style():
-    """Zwraca słownik styli akapitów."""
-    _zarejestruj_czcionki()
-    font = "DejaVu" if _FONTS_REGISTERED else "Helvetica"
-    font_b = "DejaVu-Bold" if _FONTS_REGISTERED else "Helvetica-Bold"
+def _ascii(text: str) -> str:
+    """Zamienia polskie znaki diakrytyczne na odpowiedniki ASCII."""
+    mapa = str.maketrans({
+        '\u0105': 'a', '\u0107': 'c', '\u0119': 'e', '\u0142': 'l',
+        '\u0144': 'n', '\u00f3': 'o', '\u015b': 's', '\u017a': 'z',
+        '\u017c': 'z', '\u0104': 'A', '\u0106': 'C', '\u0118': 'E',
+        '\u0141': 'L', '\u0143': 'N', '\u00d3': 'O', '\u015a': 'S',
+        '\u0179': 'Z', '\u017b': 'Z',
+    })
+    return text.translate(mapa) if isinstance(text, str) else text
 
+
+def _style():
     styles = getSampleStyleSheet()
     return {
         "title": ParagraphStyle(
-            "title", parent=styles["Title"], fontName=font_b,
+            "title", parent=styles["Title"], fontName=FONT_B,
             fontSize=18, textColor=GRANATOWY, spaceAfter=4, leading=22,
         ),
         "subtitle": ParagraphStyle(
-            "subtitle", parent=styles["Normal"], fontName=font,
+            "subtitle", parent=styles["Normal"], fontName=FONT,
             fontSize=10, textColor=SZARY, spaceAfter=12,
         ),
         "h2": ParagraphStyle(
-            "h2", parent=styles["Heading2"], fontName=font_b,
+            "h2", parent=styles["Heading2"], fontName=FONT_B,
             fontSize=13, textColor=GRANATOWY, spaceBefore=14, spaceAfter=6,
         ),
         "h3": ParagraphStyle(
-            "h3", parent=styles["Heading3"], fontName=font_b,
+            "h3", parent=styles["Heading3"], fontName=FONT_B,
             fontSize=11, textColor=GRANATOWY, spaceBefore=10, spaceAfter=4,
         ),
         "body": ParagraphStyle(
-            "body", parent=styles["Normal"], fontName=font,
+            "body", parent=styles["Normal"], fontName=FONT,
             fontSize=9.5, textColor=colors.HexColor("#1F2937"),
             spaceAfter=6, leading=13,
         ),
         "small": ParagraphStyle(
-            "small", parent=styles["Normal"], fontName=font,
+            "small", parent=styles["Normal"], fontName=FONT,
             fontSize=8, textColor=SZARY, spaceAfter=4, leading=10,
         ),
         "footer": ParagraphStyle(
-            "footer", parent=styles["Normal"], fontName=font,
+            "footer", parent=styles["Normal"], fontName=FONT,
             fontSize=7.5, textColor=SZARY, alignment=1,
         ),
-        "font": font,
-        "font_b": font_b,
     }
 
 
 def _kolor_strefy(interpretacja: str):
-    if "Zagroż" in interpretacja:
+    if "Zagro" in interpretacja:
         return ZAGROZONY
-    if "szar" in interpretacja.lower() or "Słaba" in interpretacja:
+    if "szar" in interpretacja.lower() or "Slaba" in interpretacja or "S\u0142aba" in interpretacja:
         return SZARA_STREFA
-    if interpretacja in ("Brak danych do obliczenia", "—"):
+    if interpretacja in ("Brak danych do obliczenia", "\u2014"):
         return SZARY
     return BEZPIECZNY
 
 
 def _naglowek_stopka(canvas, doc, autor: str):
-    """Rysuje stopkę na każdej stronie."""
     canvas.saveState()
-    canvas.setFont("DejaVu" if _FONTS_REGISTERED else "Helvetica", 7.5)
+    canvas.setFont(FONT, 7.5)
     canvas.setFillColor(SZARY)
-    # Linia
     canvas.setStrokeColor(ZLOTO)
     canvas.setLineWidth(0.8)
     canvas.line(20 * mm, 18 * mm, A4[0] - 20 * mm, 18 * mm)
-    # Tekst
     canvas.drawString(
         20 * mm, 12 * mm,
-        f"{autor}  ·  Kalkulator Zagrożenia Upadłością  ·  Projekt portfolio",
+        _ascii(f"{autor}  |  Kalkulator Zagrozenia Upadloscia  |  Projekt portfolio"),
     )
     canvas.drawRightString(
         A4[0] - 20 * mm, 12 * mm,
@@ -140,19 +119,6 @@ def generuj_raport(
     pola_etykiety: list,
     kontekst: Optional[Dict] = None,
 ) -> bytes:
-    """
-    Generuje raport PDF.
-
-    Args:
-        tytul: tytuł nagłówka (np. nazwa spółki lub "Raport — pojedynczy okres")
-        podtytul: opis okresu / źródła danych
-        autor: imię i nazwisko autora aplikacji
-        dane: słownik wartości finansowych {klucz: wartość}
-        wyniki: wynik policz_wszystkie_modele(dane)
-        pola_etykiety: lista (klucz, etykieta_pol) z POLA_FINANSOWE
-        kontekst: opcjonalne dodatkowe informacje (sektor, kapitalizacja itd.)
-    """
-    _zarejestruj_czcionki()
     s = _style()
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -162,17 +128,16 @@ def generuj_raport(
     )
     story = []
 
-    # ----- Nagłówek -----
-    story.append(Paragraph(tytul, s["title"]))
-    story.append(Paragraph(podtytul, s["subtitle"]))
+    story.append(Paragraph(_ascii(tytul), s["title"]))
+    story.append(Paragraph(_ascii(podtytul), s["subtitle"]))
 
     if kontekst:
-        kontekst_rows = [[k, v] for k, v in kontekst.items()]
+        kontekst_rows = [[_ascii(str(k)), _ascii(str(v))] for k, v in kontekst.items()]
         t = Table(kontekst_rows, colWidths=[55 * mm, 105 * mm])
         t.setStyle(TableStyle([
-            ("FONT", (0, 0), (-1, -1), s["font"], 9),
+            ("FONT", (0, 0), (-1, -1), FONT, 9),
             ("TEXTCOLOR", (0, 0), (0, -1), GRANATOWY),
-            ("FONT", (0, 0), (0, -1), s["font_b"], 9),
+            ("FONT", (0, 0), (0, -1), FONT_B, 9),
             ("BACKGROUND", (0, 0), (-1, -1), JASNY),
             ("BOX", (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
             ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
@@ -184,23 +149,22 @@ def generuj_raport(
         story.append(t)
         story.append(Spacer(1, 8))
 
-    # ----- Wyniki modeli -----
     story.append(Paragraph("Wyniki modeli dyskryminacyjnych", s["h2"]))
 
     rows = [["Model", "Z-score", "Klasyfikacja"]]
     kolory_wierszy = [None]
     for nazwa, info in wyniki.items():
         z = info["wynik"]
-        z_str = "—" if z is None else f"{z:.4f}"
-        rows.append([nazwa, z_str, info["interpretacja"]])
+        z_str = "\u2014" if z is None else f"{z:.4f}"
+        rows.append([_ascii(nazwa), z_str, _ascii(info["interpretacja"])])
         kolory_wierszy.append(_kolor_strefy(info["interpretacja"]))
 
     t = Table(rows, colWidths=[55 * mm, 30 * mm, 75 * mm])
     style_cmds = [
-        ("FONT", (0, 0), (-1, 0), s["font_b"], 9),
+        ("FONT", (0, 0), (-1, 0), FONT_B, 9),
         ("BACKGROUND", (0, 0), (-1, 0), GRANATOWY),
         ("TEXTCOLOR", (0, 0), (-1, 0), BIALY),
-        ("FONT", (0, 1), (-1, -1), s["font"], 9),
+        ("FONT", (0, 1), (-1, -1), FONT, 9),
         ("ALIGN", (1, 1), (1, -1), "RIGHT"),
         ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
         ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
@@ -212,39 +176,37 @@ def generuj_raport(
     for i, kolor in enumerate(kolory_wierszy):
         if kolor and i > 0:
             style_cmds.append(("TEXTCOLOR", (2, i), (2, i), kolor))
-            style_cmds.append(("FONT", (2, i), (2, i), s["font_b"], 9))
+            style_cmds.append(("FONT", (2, i), (2, i), FONT_B, 9))
     t.setStyle(TableStyle(style_cmds))
     story.append(t)
 
-    # ----- Konsensus -----
     licz_zagr = sum(
         1 for v in wyniki.values()
-        if v["wynik"] is not None and "Zagroż" in v["interpretacja"]
+        if v["wynik"] is not None and "Zagro" in v["interpretacja"]
     )
     licz_obl = sum(1 for v in wyniki.values() if v["wynik"] is not None)
-    konsensus = "ZAGROŻENIE" if licz_zagr > licz_obl / 2 else "BRAK ZAGROŻENIA"
-    kolor_kons = ZAGROZONY if konsensus == "ZAGROŻENIE" else BEZPIECZNY
+    konsensus = "ZAGROZENIE" if licz_zagr > licz_obl / 2 else "BRAK ZAGROZENIA"
+    kolor_kons = ZAGROZONY if "ZAGROZENIE" == konsensus else BEZPIECZNY
 
     story.append(Spacer(1, 10))
     story.append(Paragraph(
-        f"<font name='{s['font_b']}'>Konsensus modeli: "
+        f"<font name='{FONT_B}'>Konsensus modeli: "
         f"<font color='{kolor_kons.hexval()}'>{konsensus}</font></font> "
-        f"({licz_zagr} z {licz_obl} modeli sygnalizuje zagrożenie)",
+        f"({licz_zagr} z {licz_obl} modeli sygnalizuje zagrozenie)",
         s["body"],
     ))
 
-    # ----- Dane wejściowe -----
-    story.append(Paragraph("Dane wejściowe (w tysiącach PLN)", s["h2"]))
-    rows = [["Pozycja", "Wartość"]]
+    story.append(Paragraph("Dane wejsciowe (w tysiacach PLN)", s["h2"]))
+    rows = [["Pozycja", "Wartosc"]]
     for klucz, etyk in pola_etykiety:
         v = dane.get(klucz, 0)
-        rows.append([etyk, f"{v:,.2f}".replace(",", " ")])
+        rows.append([_ascii(etyk), f"{v:,.2f}".replace(",", " ")])
     t = Table(rows, colWidths=[100 * mm, 60 * mm])
     t.setStyle(TableStyle([
-        ("FONT", (0, 0), (-1, 0), s["font_b"], 9),
+        ("FONT", (0, 0), (-1, 0), FONT_B, 9),
         ("BACKGROUND", (0, 0), (-1, 0), GRANATOWY),
         ("TEXTCOLOR", (0, 0), (-1, 0), BIALY),
-        ("FONT", (0, 1), (-1, -1), s["font"], 8.5),
+        ("FONT", (0, 1), (-1, -1), FONT, 8.5),
         ("ALIGN", (1, 1), (1, -1), "RIGHT"),
         ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
         ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
@@ -256,23 +218,22 @@ def generuj_raport(
     ]))
     story.append(t)
 
-    # ----- Wskaźniki szczegółowe per model -----
-    story.append(Paragraph("Wskaźniki szczegółowe per model", s["h2"]))
+    story.append(Paragraph("Wskazniki szczegolowe per model", s["h2"]))
     for nazwa, info in wyniki.items():
-        story.append(Paragraph(nazwa, s["h3"]))
+        story.append(Paragraph(_ascii(nazwa), s["h3"]))
         wsk = info.get("wskazniki") or {}
         if not wsk:
-            story.append(Paragraph("Brak wskaźników do wyświetlenia.", s["small"]))
+            story.append(Paragraph("Brak wskaznikow do wyswietlenia.", s["small"]))
             continue
-        rows = [["Wskaźnik", "Wartość"]]
+        rows = [["Wskaznik", "Wartosc"]]
         for k, v in wsk.items():
-            rows.append([k, "—" if v is None else f"{v:.4f}"])
+            rows.append([_ascii(str(k)), "\u2014" if v is None else f"{v:.4f}"])
         t = Table(rows, colWidths=[40 * mm, 40 * mm])
         t.setStyle(TableStyle([
-            ("FONT", (0, 0), (-1, 0), s["font_b"], 8.5),
+            ("FONT", (0, 0), (-1, 0), FONT_B, 8.5),
             ("BACKGROUND", (0, 0), (-1, 0), JASNY),
             ("TEXTCOLOR", (0, 0), (-1, 0), GRANATOWY),
-            ("FONT", (0, 1), (-1, -1), s["font"], 8.5),
+            ("FONT", (0, 1), (-1, -1), FONT, 8.5),
             ("ALIGN", (1, 1), (1, -1), "RIGHT"),
             ("BOX", (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
             ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#E2E8F0")),
@@ -280,25 +241,23 @@ def generuj_raport(
             ("RIGHTPADDING", (0, 0), (-1, -1), 6),
         ]))
         story.append(t)
-        story.append(Paragraph(info.get("opis", ""), s["small"]))
+        story.append(Paragraph(_ascii(info.get("opis", "")), s["small"]))
         story.append(Spacer(1, 4))
 
-    # ----- Disclaimer -----
     story.append(Spacer(1, 10))
     story.append(Paragraph(
-        "<b>Zastrzeżenie:</b> Raport został wygenerowany automatycznie przez "
-        "aplikację „Kalkulator Zagrożenia Upadłością” w ramach projektu "
-        "portfolio. Wartości wskaźników i klasyfikacji opierają się wyłącznie "
-        "na danych wprowadzonych do formularza i nie uwzględniają jakościowych "
-        "czynników ryzyka (jakość audytora, struktura wynagrodzenia zarządu, "
+        "<b>Zastrzezenie:</b> Raport zostal wygenerowany automatycznie przez "
+        "aplikacje 'Kalkulator Zagrozenia Upadloscia' w ramach projektu "
+        "portfolio. Wartosci wskaznikow i klasyfikacji opieraja sie wylacznie "
+        "na danych wprowadzonych do formularza i nie uwzgledniaja jakosciowych "
+        "czynnikow ryzyka (jakosc audytora, struktura wynagrodzenia zarzadu, "
         "ryzyko sektorowe, czynniki makroekonomiczne). Raport nie stanowi "
-        "rekomendacji inwestycyjnej w rozumieniu rozporządzenia MAR (UE 596/2014) "
-        "ani Rozporządzenia Delegowanego Komisji (UE) 2017/565. Każda decyzja "
-        "inwestycyjna lub kredytowa wymaga uzupełniającej analizy.",
+        "rekomendacji inwestycyjnej w rozumieniu rozporzadzenia MAR (UE 596/2014) "
+        "ani Rozporzadzenia Delegowanego Komisji (UE) 2017/565. Kazda decyzja "
+        "inwestycyjna lub kredytowa wymaga uzupelniajacych analiz.",
         s["small"],
     ))
 
-    # Render z stopką
     def _stopka(canvas, doc):
         _naglowek_stopka(canvas, doc, autor)
 
